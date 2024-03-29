@@ -1,5 +1,5 @@
 from django.db import models
-from users.models import User
+from users.models import CustomUser
 from django.conf import settings
 
 
@@ -28,7 +28,7 @@ class Tag(models.Model):
         ]
 
 
-class IngredientInRecipe(models.Model):
+class Ingredient(models.Model):
 
     name = models.CharField(
         'Ингредиент',
@@ -37,9 +37,6 @@ class IngredientInRecipe(models.Model):
     measurement_unit = models.CharField(
         'Единица измерения',
         max_length=settings.CHAR_LENGTH
-    )
-    amount = models.IntegerField(
-        'Количество'
     )
 
 
@@ -51,7 +48,7 @@ class Recepie(models.Model):
         on_delete=models.CASCADE
     )
     author = models.ForeignKey(
-        User,
+        CustomUser,
         on_delete=models.CASCADE,
         verbose_name='Автор'
     )
@@ -60,13 +57,30 @@ class Recepie(models.Model):
         max_length=settings.CHAR_LENGTH
     )
     ingredients = models.ForeignKey(
-        IngredientInRecipe,
+        Ingredient,
         verbose_name='Ингредиенты',
         on_delete=models.CASCADE
     )
     text = models.TextField()
     image = models.ImageField(
         upload_to='recepie/images/',
+    )
+
+
+class IngredientInRecipe(models.Model):
+
+    ingredient = models.ForeignKey(
+        Ingredient,
+        verbose_name='Ингредиент',
+        on_delete=models.CASCADE
+    )
+    recepie = models.ForeignKey(
+        Recepie,
+        verbose_name='Рецепт',
+        on_delete=models.CASCADE
+    )
+    amount = models.PositiveSmallIntegerField(
+        'Количество'
     )
 
 
@@ -79,7 +93,7 @@ class Favourites(models.Model):
         on_delete=models.CASCADE
     )
     author = models.ForeignKey(
-        User,
+        CustomUser,
         verbose_name='Автор',
         related_name='author',
         on_delete=models.CASCADE
