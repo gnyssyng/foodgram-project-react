@@ -1,13 +1,18 @@
 from django.contrib.auth import authenticate
-from rest_framework import serializers
-from djoser.conf import settings
+from django.core.exceptions import ValidationError
 from django.core.validators import RegexValidator
-from rest_framework.validators import UniqueValidator
 from djoser.serializers import UserCreateSerializer, UserSerializer
+from rest_framework import serializers
+from rest_framework.validators import UniqueValidator
+
 from users.models import CustomUser, Follow
 
 
 class CustomUserCreateSerializer(UserCreateSerializer):
+    '''
+    Сериализатор для модели CustomUser,
+    предназначенный для создания новых объектов модели.
+    '''
 
     email = serializers.EmailField(
         validators=[
@@ -37,13 +42,15 @@ class CustomUserCreateSerializer(UserCreateSerializer):
 
 
 class CustomTokenCreateSerializer(serializers.Serializer):
-
-    password = serializers.CharField()
+    '''
+    Сериалиазтор, предназначенный для создания токенов авторизации.
+    '''
 
     default_error_messages = {
-        'invalid_credentials': settings.CONSTANTS.messages.INVALID_CREDENTIALS_ERROR,
-        'inactive_account': settings.CONSTANTS.messages.INACTIVE_ACCOUNT_ERROR,
+        'invalid_credentials': 'Ввендены неккоректные данные.'
     }
+
+    password = serializers.CharField()
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -51,21 +58,25 @@ class CustomTokenCreateSerializer(serializers.Serializer):
         self.fields['email'] = serializers.CharField(required=False)
 
     def validate(self, attrs):
-        password = attrs.get("password")
+        password = attrs.get('password')
         params = {'email': attrs.get('email')}
         self.user = authenticate(
-            request=self.context.get("request"), **params, password=password
+            request=self.context.get('request'), **params, password=password
         )
         if not self.user:
             self.user = CustomUser.objects.filter(**params).first()
             if self.user and not self.user.check_password(password):
-                self.fail("invalid_credentials")
+                self.fail('invalid_credentials')
         if self.user and self.user.is_active:
             return attrs
-        self.fail("invalid_credentials")
+        self.fail('invalid_credentials')
 
 
 class CustomUserSerializer(UserSerializer):
+    '''
+    Сериализатор модели CustomUSer,
+    предназначенный для чтения объектов модели.
+    '''
 
     is_subscribed = serializers.SerializerMethodField()
 
@@ -82,7 +93,11 @@ class CustomUserSerializer(UserSerializer):
 
     def get_is_subscribed(self, obj):
         request = self.context.get('request')
-        if request and request.user.is_authenticated:
+        if not request.user:
+            raise ValidationError(
+                'Неавторизированный пользователь.'
+            )
+        if request.user.is_authenticated:
             user = request.user
             subscribed = Follow.objects.filter(
                 user=user,

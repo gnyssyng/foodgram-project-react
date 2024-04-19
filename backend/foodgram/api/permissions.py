@@ -1,12 +1,8 @@
-from rest_framework.permissions import BasePermission, AllowAny
+from rest_framework.permissions import BasePermission
 
 
-class IsAuthorOrModeratorOrReadOnly(BasePermission):
+class IsAuthor(BasePermission):
     '''Право доступа для авторов объектов.'''
 
     def has_object_permission(self, request, view, obj):
-
-        if request.path == 'users/me/' and request.user.is_authenticated:
-            return True
-        else:
-            return AllowAny
+        return obj.author.id == request.user.id

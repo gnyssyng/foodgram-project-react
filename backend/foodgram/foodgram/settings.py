@@ -100,6 +100,7 @@ DJOSER = {
         'token_create': 'users.serializers.CustomTokenCreateSerializer',
         'user_create': 'users.serializers.CustomUserCreateSerializer',
         'user': 'users.serializers.CustomUserSerializer',
+        'current_user': 'users.serializers.CustomUserSerializer',
     }
 }
 
@@ -113,6 +114,9 @@ USE_I18N = True
 USE_L10N = True
 
 USE_TZ = True
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = '/var/www/foodgram/media/'
 
 STATIC_URL = '/static/'
 

@@ -1,9 +1,12 @@
-from django.db import models
-from users.models import CustomUser
 from django.conf import settings
+from django.core.validators import MinValueValidator
+from django.db import models
+
+from users.models import CustomUser
 
 
 class Tag(models.Model):
+    '''Модель тэгов рецепта.'''
 
     name = models.CharField(
         'Тэг',
@@ -29,6 +32,7 @@ class Tag(models.Model):
 
 
 class Ingredient(models.Model):
+    '''Модель ингредиентов рецепта.'''
 
     name = models.CharField(
         'Ингредиент',
@@ -40,12 +44,12 @@ class Ingredient(models.Model):
     )
 
 
-class Recepie(models.Model):
+class Recipe(models.Model):
+    '''Модель рецепта.'''
 
-    tags = models.ForeignKey(
+    tags = models.ManyToManyField(
         Tag,
-        verbose_name='Тэги',
-        on_delete=models.CASCADE
+        related_name='tags',
     )
     author = models.ForeignKey(
         CustomUser,
@@ -54,47 +58,92 @@ class Recepie(models.Model):
     )
     name = models.CharField(
         'Рецепт',
-        max_length=settings.CHAR_LENGTH
+        max_length=settings.CHAR_LENGTH,
     )
-    ingredients = models.ForeignKey(
+    ingredients = models.ManyToManyField(
         Ingredient,
-        verbose_name='Ингредиенты',
-        on_delete=models.CASCADE
+        through='IngredientInRecipe',
+        related_name='ingredients',
     )
-    text = models.TextField()
+    text = models.TextField(
+        'Текст'
+    )
     image = models.ImageField(
-        upload_to='recepie/images/',
+        'Картинка',
+        upload_to='recipe/images/',
     )
+    cooking_time = models.PositiveSmallIntegerField(
+        'Время приготовления',
+        validators=[
+            MinValueValidator(
+                0,
+                'Неккореткное время приготовления.'
+                'Время приготовления должно быть больше 0.'
+            ),
+        ]
+    )
+
+    class Meta:
+
+        ordering = ['-id']
 
 
 class IngredientInRecipe(models.Model):
+    '''Модель, связывающая модели Recipe и Ingredient.'''
 
     ingredient = models.ForeignKey(
         Ingredient,
         verbose_name='Ингредиент',
-        on_delete=models.CASCADE
-    )
-    recepie = models.ForeignKey(
-        Recepie,
-        verbose_name='Рецепт',
-        on_delete=models.CASCADE
+        on_delete=models.CASCADE,
+        related_name='ingredientrecipes'
     )
     amount = models.PositiveSmallIntegerField(
-        'Количество'
+        'Количество',
+        validators=[
+            MinValueValidator(
+                0,
+                'Неккореткное количество ингредиента.'
+                'Количество должно быть больше 0.'
+            ),
+        ]
+    )
+    recipe = models.ForeignKey(
+        Recipe,
+        verbose_name='Рецпет',
+        on_delete=models.CASCADE,
+        related_name='ingredientrecipes'
     )
 
 
-class Favourites(models.Model):
+class Favorite(models.Model):
+    '''Модель избранных рецпетов.'''
 
-    recepie = models.ForeignKey(
-        Recepie,
+    recipe = models.ForeignKey(
+        Recipe,
         verbose_name='Рецепт',
-        related_name='recepies',
+        related_name='recipes_favourites',
         on_delete=models.CASCADE
     )
     author = models.ForeignKey(
         CustomUser,
         verbose_name='Автор',
-        related_name='author',
+        related_name='author_favourites',
+        on_delete=models.CASCADE
+    )
+
+
+class Cart(models.Model):
+    '''Модель пользовательской корзины.'''
+
+    recipe = models.ForeignKey(
+        Recipe,
+        verbose_name='Рецепт',
+        related_name='recipes_cart',
+        on_delete=models.CASCADE
+    )
+    author = models.ForeignKey(
+        CustomUser,
+        verbose_name='Автор',
+        related_name='author_cart',
         on_delete=models.CASCADE
     )

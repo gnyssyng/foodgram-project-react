@@ -1,8 +1,9 @@
-from django.db import models
 from django.contrib.auth.models import AbstractUser
+from django.db import models
 
 
 class CustomUser(AbstractUser):
+    '''Модель пользователя.'''
 
     email = models.EmailField(
         'Электронная почта',
@@ -59,3 +60,5 @@ class Follow(models.Model):
                 check=~models.Q(user=models.F('following')),
             ),
         ]
+
+        ordering = ['-id']
