@@ -1,3 +1,14 @@
+from api.filters import RecipeFilter
+from api.models import (
+    Cart, Favorite, Ingredient,
+    IngredientInRecipe, Recipe, Tag
+)
+from api.permissions import IsAuthor
+from api.serializers import (
+    IngredientSerializer, RecipeAddSerializer,
+    RecipeSerializer, SimpleRecipeReadSerializer,
+    TagSerializer
+)
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
@@ -6,17 +17,6 @@ from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
-
-from api.filters import RecipeFilter
-from api.models import (
-    Cart, Favorite, Ingredient, IngredientInRecipe, Recipe, Tag
-)
-from api.permissions import IsAuthor
-from api.serializers import (
-    IngredientSerializer, RecipeAddSerializer,
-    RecipeSerializer, SimpleRecipeReadSerializer,
-    TagSerializer
-)
 
 
 class TagViewSet(ReadOnlyModelViewSet):

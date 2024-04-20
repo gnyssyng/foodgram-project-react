@@ -1,13 +1,10 @@
 import base64
 
+from api.models import (Cart, Favorite, Ingredient, IngredientInRecipe, Recipe,
+                        Tag)
 from django.core.exceptions import ValidationError
 from django.core.files.base import ContentFile
 from rest_framework import serializers
-
-from api.models import (
-    Cart, Favorite, Ingredient,
-    IngredientInRecipe, Recipe, Tag
-)
 from users.models import Follow
 from users.serializers import CustomUserSerializer
 

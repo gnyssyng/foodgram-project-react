@@ -1,8 +1,5 @@
+from api.models import Cart, Favorite, Ingredient, Recipe, Tag
 from django.contrib import admin
-
-from api.models import (
-    Ingredient, Tag, Recipe, Favorite, Cart
-)
 from users.models import CustomUser, Follow
 
 admin.site.empty_value_display = 'Не задано'
