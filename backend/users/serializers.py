@@ -4,6 +4,7 @@ from django.core.validators import RegexValidator
 from djoser.serializers import UserCreateSerializer, UserSerializer
 from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
+
 from users.models import CustomUser, Follow
 
 

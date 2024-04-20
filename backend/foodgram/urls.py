@@ -1,9 +1,10 @@
-from api.views import IngredientViewSet, RecipeViewSet, TagViewSet
 from django.contrib import admin
 from django.urls import include, path
 from django.views.generic import TemplateView
 from djoser.views import TokenCreateView, TokenDestroyView
 from rest_framework import routers
+
+from api.views import IngredientViewSet, RecipeViewSet, TagViewSet
 from users.views import CustomUserView
 
 router = routers.DefaultRouter()
