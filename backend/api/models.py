@@ -72,6 +72,10 @@ class Recipe(models.Model):
         'Картинка',
         upload_to='recipe/images/',
     )
+    pub_date = models.DateTimeField(
+        'Дата публикации',
+        auto_now_add=True
+    )
     cooking_time = models.PositiveSmallIntegerField(
         'Время приготовления',
         validators=[
@@ -85,7 +89,7 @@ class Recipe(models.Model):
 
     class Meta:
 
-        ordering = ['-id']
+        ordering = ['-pub_date']
 
 
 class IngredientInRecipe(models.Model):
