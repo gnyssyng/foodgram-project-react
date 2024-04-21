@@ -50,9 +50,8 @@ class CustomUserView(UserViewSet):
             recipes_limit = None
         recipes = Recipe.objects.filter(
             author_id__in=self.get_follow_queryset().values_list(
-               'following', flat=True
-            )
-        ).order_by('id')
+                'following', flat=True
+            )).order_by('id')
         print(recipes)
         page = self.paginate_queryset(queryset)
         serializer = FollowSerializer(
@@ -75,14 +74,12 @@ class CustomUserView(UserViewSet):
             return Response(serializer.data)
         else:
             return Response(
-                    self.ERRORS.get('not_authenticated'),
-                    status=status.HTTP_401_UNAUTHORIZED
-                )
+                self.ERRORS.get('not_authenticated'),
+                status=status.HTTP_401_UNAUTHORIZED
+            )
 
-    @action(
-            ['post', 'delete'], detail=True,
-            permission_classes=[IsAuthenticated, ]
-        )
+    @action(['post', 'delete'], detail=True,
+            permission_classes=[IsAuthenticated, ])
     def subscribe(self, request, id):
         '''Управляет созданием и удалением подписок пользователя.'''
         following = get_object_or_404(CustomUser, id=int(id))
