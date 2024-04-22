@@ -8,12 +8,16 @@ from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
 
 from api.filters import RecipeFilter
-from api.models import (Cart, Favorite, Ingredient, IngredientInRecipe, Recipe,
-                        Tag)
+from api.models import (
+    Cart, Favorite, Ingredient,
+    IngredientInRecipe, Recipe, Tag
+)
 from api.permissions import IsAuthor
-from api.serializers import (IngredientSerializer, RecipeAddSerializer,
-                             RecipeSerializer, SimpleRecipeReadSerializer,
-                             TagSerializer)
+from api.serializers import (
+    IngredientSerializer, RecipeAddSerializer,
+    RecipeSerializer, SimpleRecipeReadSerializer,
+    TagSerializer
+)
 
 
 class TagViewSet(ReadOnlyModelViewSet):

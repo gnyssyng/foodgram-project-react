@@ -4,8 +4,10 @@ from django.core.exceptions import ValidationError
 from django.core.files.base import ContentFile
 from rest_framework import serializers
 
-from api.models import (Cart, Favorite, Ingredient, IngredientInRecipe, Recipe,
-                        Tag)
+from api.models import (
+    Cart, Favorite, Ingredient, IngredientInRecipe,
+    Recipe, Tag
+)
 from users.models import Follow
 from users.serializers import CustomUserSerializer
 
@@ -137,13 +139,23 @@ class RecipeSerializer(serializers.ModelSerializer, CartFavoriteMixin):
         many=True,
         source='ingredientrecipes'
     )
+    image_url = serializers.SerializerMethodField(
+        'get_image_url',
+        read_only=True,
+    )
 
     class Meta:
         model = Recipe
         fields = (
             'id', 'tags', 'author', 'ingredients', 'is_favorited',
-            'is_in_shopping_cart', 'name', 'image', 'text', 'cooking_time'
+            'is_in_shopping_cart', 'name', 'image',
+            'image_url', 'text', 'cooking_time'
         )
+
+    def get_image_url(self, obj):
+        if obj.image:
+            return obj.image.url
+        return None
 
 
 def raise_recipe_error(message):
