@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
+from django.shortcuts import render
 from django.urls import include, path
 from django.views.generic import TemplateView
 from djoser.views import TokenCreateView, TokenDestroyView
@@ -15,6 +16,12 @@ router.register(r'tags', TagViewSet)
 router.register(r'ingredients', IngredientViewSet)
 router.register(r'recipes', RecipeViewSet)
 
+
+def custom_404(request, exception):
+    return render(request, '404.html', status=404)
+
+
+handler404 = 'foodgram.urls.custom_404'
 urlpatterns = [
     path('admin/', admin.site.urls),
     path(
