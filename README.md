@@ -19,6 +19,13 @@ Python 3, Django 3.2, Django REST Framework, Djoser, Postgres, GIT
 git clone git@github.com:gnyssyng/foodgram-project-react.git
 ```
 
+В проекте также предусмотрена возможность загрузки ингредиентов при помощи скрипта.
+Для этого необходимо из папки с файлом manage.py выполнить следующую команду:
+```
+python manage.py runscript load_data
+```
+Данные хранятся в data. Они предоставлены в виде CSV-файла и JSON, однако скрипт использует CSV.
+
 ## В дериктории проекта выполнить команду:
 Для Linux И MacOs:
 
