@@ -78,13 +78,6 @@ class RecipeViewSet(ModelViewSet):
     def perform_update(self, serializer):
         serializer.save(author=self.request.user)
 
-    def get_queryset(self):
-        queryset = super().get_queryset()
-        limit = self.request.query_params.get('limit', None)
-        if limit:
-            queryset = queryset[:int(limit)]
-        return queryset
-
     def get_permissions(self):
         if self.request.method == 'PATCH':
             return [IsAuthor(), ]
