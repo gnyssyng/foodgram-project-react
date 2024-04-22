@@ -1,3 +1,4 @@
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, status
@@ -123,7 +124,7 @@ class RecipeViewSet(ModelViewSet):
                     cart[ingredient.name] = amount
                 else:
                     cart[ingredient.name] += amount
-        response = Response(content_type='text/plain')
+        response = HttpResponse(content_type='text/plain')
         response['Content-Disposition'] = (
             'attachment; filename="shopping_list.txt"'
         )

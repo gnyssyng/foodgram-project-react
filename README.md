@@ -1,5 +1,6 @@
 ![status badge](https://github.com/gnyssyng/foodgram-project-react/actions/workflows/main.yml/badge.svg)
 
+https://foodie.myvnc.com/
 #  Foodgram
 Foodgram - это социальная сеть, целью которой является создание и обмен рецеатми различных блюд.
 В его функционал входит:
