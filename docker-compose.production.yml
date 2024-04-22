@@ -18,21 +18,20 @@ services:
       - db
     volumes: 
       - static_volume:/backend_static
-      - media:/var/www/foodgram/media/
+      - media:/var/wwg/foodgram/media/
   frontend: 
     image: gnyssyng/foodgram_frontend 
     env_file: .env 
     command: cp -r /app/build/. /frontend_static/ 
     volumes: 
       - static_volume:/frontend_static 
-  infra: 
-    image: gnyssyng/foodgram_gateway
-    restart: always
+  nginx: 
+    image: gnyssyng/foodgram_gateway 
     env_file: .env 
     depends_on:
       - db
     volumes: 
       - static_volume:/staticfiles/
-      - media:/var/www/foodgram/media/
+      - media:/var/wwg/foodgram/media/
     ports: 
-      - 8080:80 
+      - 9000:80 
