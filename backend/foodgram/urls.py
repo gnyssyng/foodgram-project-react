@@ -1,3 +1,5 @@
+from django.conf import settings
+from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
 from django.views.generic import TemplateView
@@ -8,7 +10,6 @@ from api.views import IngredientViewSet, RecipeViewSet, TagViewSet
 from users.views import CustomUserView
 
 router = routers.DefaultRouter()
-# Роутер приложений
 router.register(r'users', CustomUserView)
 router.register(r'tags', TagViewSet)
 router.register(r'ingredients', IngredientViewSet)
@@ -26,4 +27,4 @@ urlpatterns = [
     path('api/', include('djoser.urls')),
     path('api/auth/token/login/', TokenCreateView.as_view()),
     path('api/auth/token/logout/', TokenDestroyView.as_view()),
-]
+] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
