@@ -25,6 +25,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework.authtoken',
     'djoser',
+    'colorfield',
     'users.apps.UsersConfig',
     'api.apps.ApiConfig',
 ]
@@ -71,6 +72,14 @@ DATABASES = {
         'PORT': os.getenv('DB_PORT', 5432)
     }
 }
+
+'''DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
+    }
+}'''
+
 
 AUTH_PASSWORD_VALIDATORS = [
     {

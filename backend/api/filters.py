@@ -4,11 +4,14 @@ from api.models import Recipe
 
 
 class RecipeFilter(filters.FilterSet):
-    '''
-    Фильтр модели рецепта, в котором реализаована
-    возможность филтрации рецептов по автору, множественным тэгам,
-    а так же по тому находится ли рецепт в пользовательской корзине
-    или избранном.
+    '''Фильтр модели рецепта.
+
+    В данном фильтре котором реализаована возможность фильтрации рецептов
+    по автору, множественным тэгам.
+    Метод filter_is_favorited в качестве аргумента принимает queryset
+    и возвращает объекты, добавленные в избранное.
+    Метод filter_is_in_shopping_cart в качестве аргумента принимает queryset
+    возвращает объекты, добавленные в пользовательскую корзину.
     '''
 
     tags = filters.AllValuesMultipleFilter(field_name='tags__slug')
@@ -27,13 +30,11 @@ class RecipeFilter(filters.FilterSet):
             return queryset.filter(
                 recipes_favourites__author=self.request.user
             )
-        else:
-            return queryset
+        return queryset
 
     def filter_is_in_shopping_cart(self, queryset, name, value):
         if value and self.request.user.is_authenticated:
             return queryset.filter(
                 recipes_cart__author=self.request.user
             )
-        else:
-            return queryset
+        return queryset

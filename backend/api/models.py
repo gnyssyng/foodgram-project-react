@@ -1,3 +1,4 @@
+from colorfield.fields import ColorField
 from django.conf import settings
 from django.core.validators import MinValueValidator
 from django.db import models
@@ -16,19 +17,23 @@ class Tag(models.Model):
         'Слаг',
         max_length=settings.CHAR_LENGTH
     )
-    color = models.CharField(
+    color = ColorField(
         'Цвет',
-        max_length=settings.COLOR_CHAR_LENGTH
     )
 
     class Meta:
-
         constraints = [
             models.UniqueConstraint(
                 fields=['name', 'slug', 'color'],
                 name='unique_tag'
             )
         ]
+        ordering = ['id']
+        verbose_name = 'Тэг'
+        verbose_name_plural = 'Тэги'
+
+    def __str__(self):
+        return f'{self.name}'
 
 
 class Ingredient(models.Model):
@@ -43,13 +48,27 @@ class Ingredient(models.Model):
         max_length=settings.CHAR_LENGTH
     )
 
+    class Meta:
+        ordering = ['id']
+        verbose_name = 'Ингредиент'
+        verbose_name_plural = 'Ингредиенты'
+        constraints = [
+                models.UniqueConstraint(
+                    fields=['name', 'measurement_unit'],
+                    name='unique_ingredient'
+                )
+            ]
+
+    def __str__(self):
+        return f'{self.name}'
+
 
 class Recipe(models.Model):
     '''Модель рецепта.'''
 
     tags = models.ManyToManyField(
         Tag,
-        related_name='tags',
+        related_name='recipes',
     )
     author = models.ForeignKey(
         CustomUser,
@@ -88,8 +107,12 @@ class Recipe(models.Model):
     )
 
     class Meta:
-
         ordering = ['-pub_date']
+        verbose_name = 'Рецепт'
+        verbose_name_plural = 'Рецепты'
+
+    def __str__(self):
+        return f'{self.name}'
 
 
 class IngredientInRecipe(models.Model):
@@ -118,6 +141,12 @@ class IngredientInRecipe(models.Model):
         related_name='ingredientrecipes'
     )
 
+    class Meta:
+        ordering = ['id']
+
+    def __str__(self):
+        return f'{self.recipe}'
+
 
 class Favorite(models.Model):
     '''Модель избранных рецпетов.'''
@@ -135,6 +164,14 @@ class Favorite(models.Model):
         on_delete=models.CASCADE
     )
 
+    class Meta:
+        ordering = ['id']
+        verbose_name = 'Избранный рецепт'
+        verbose_name_plural = 'Избранные рецепты'
+
+    def __str__(self):
+        return f'{self.recipe}'
+
 
 class Cart(models.Model):
     '''Модель пользовательской корзины.'''
@@ -151,3 +188,11 @@ class Cart(models.Model):
         related_name='author_cart',
         on_delete=models.CASCADE
     )
+
+    class Meta:
+        ordering = ['id']
+        verbose_name = 'Рецепт в корзине'
+        verbose_name_plural = 'Рецепты в корзине'
+
+    def __str__(self):
+        return f'{self.recipe}'
