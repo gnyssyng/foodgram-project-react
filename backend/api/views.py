@@ -49,7 +49,7 @@ class RecipeViewSet(ModelViewSet):
         'not_in_cart_favorite': 'Рецепт с таким id не был добавлен.'
     }
 
-    filter_backends = [DjangoFilterBackend,]
+    filter_backends = [DjangoFilterBackend]
     filterset_class = RecipeFilter
     permission_classes = [IsAuthenticatedOrReadOnly, IsAuthor]
 
