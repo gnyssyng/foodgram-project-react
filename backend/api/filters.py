@@ -1,6 +1,5 @@
-from django_filters import rest_framework as filters
-
 from api.models import Recipe
+from django_filters import rest_framework as filters
 
 
 class RecipeFilter(filters.FilterSet):
@@ -28,13 +27,13 @@ class RecipeFilter(filters.FilterSet):
     def filter_is_favorited(self, queryset, name, value):
         if value and self.request.user.is_authenticated:
             return queryset.filter(
-                recipes_favourites__author=self.request.user
+                favorites__author=self.request.user
             )
         return queryset
 
     def filter_is_in_shopping_cart(self, queryset, name, value):
         if value and self.request.user.is_authenticated:
             return queryset.filter(
-                recipes_cart__author=self.request.user
+                carts__author=self.request.user
             )
         return queryset

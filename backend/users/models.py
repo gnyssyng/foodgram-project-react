@@ -1,19 +1,22 @@
+from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+from users.validators import validate_me, validate_pattern
 
 
-class CustomUser(AbstractUser):
+class User(AbstractUser):
     '''Модель пользователя.'''
 
     email = models.EmailField(
         'Электронная почта',
         unique=True,
-        max_length=254
+        max_length=settings.EMAIL_LENGTH
     )
     username = models.CharField(
         'Уникальный юзернейм',
         unique=True,
-        max_length=150
+        max_length=150,
+        validators=[validate_pattern, validate_me]
     )
     first_name = models.CharField(
         'Имя пользователя',
@@ -28,6 +31,14 @@ class CustomUser(AbstractUser):
         max_length=150
     )
 
+    USERNAME_FIELD = 'email'
+    REQUIRED_FIELDS = ('first_name', 'last_name', 'username')
+
+    class Meta:
+        ordering = ('username',)
+        verbose_name = 'Пользователь'
+        verbose_name_plural = 'Пользователи'
+
     def __str__(self):
         return self.username
 
@@ -36,13 +47,13 @@ class Follow(models.Model):
     '''Модель подписок на пользователя.'''
 
     user = models.ForeignKey(
-        CustomUser,
+        User,
         on_delete=models.CASCADE,
         related_name='follower',
         verbose_name='Пользователь'
     )
     following = models.ForeignKey(
-        CustomUser,
+        User,
         on_delete=models.CASCADE,
         verbose_name='Подписка',
         related_name='following'
@@ -61,4 +72,6 @@ class Follow(models.Model):
             ),
         ]
 
-        ordering = ['-id']
+        ordering = ('user',)
+        verbose_name = 'Подписка'
+        verbose_name_plural = 'Подпсики'

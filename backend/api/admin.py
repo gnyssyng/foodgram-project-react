@@ -1,11 +1,8 @@
-from django.contrib import admin
+from api.models import (Cart, Favorite, Ingredient, IngredientInRecipe, Recipe,
+                        Tag)
 from django.apps import apps
-
-from api.models import (
-    Cart, Favorite, Ingredient, Recipe,
-    Tag, IngredientInRecipe
-)
-from users.models import CustomUser, Follow
+from django.contrib import admin
+from users.models import Follow, User
 
 admin.site.empty_value_display = 'Не задано'
 
@@ -68,7 +65,7 @@ class CartAdmin(admin.ModelAdmin):
     list_filter = ('recipe', 'author')
 
 
-@admin.register(CustomUser)
+@admin.register(User)
 class CustomUserAdmin(admin.ModelAdmin):
     list_display = (
         'id', 'email', 'username', 'first_name',

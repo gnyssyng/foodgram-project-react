@@ -5,4 +5,6 @@ class IsAuthor(BasePermission):
     '''Право доступа для авторов объектов.'''
 
     def has_object_permission(self, request, view, obj):
-        return obj.author.id == request.user.id
+        if request.method == 'GET':
+            return True
+        return obj.author == request.user

@@ -42,7 +42,7 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = 'foodgram.urls'
 
-AUTH_USER_MODEL = 'users.CustomUser'
+AUTH_USER_MODEL = 'users.User'
 
 TEMPLATES = [
     {
@@ -62,6 +62,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'foodgram.wsgi.application'
 
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
@@ -72,13 +73,6 @@ DATABASES = {
         'PORT': os.getenv('DB_PORT', 5432)
     }
 }
-
-'''DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
-}'''
 
 
 AUTH_PASSWORD_VALIDATORS = [
@@ -105,7 +99,7 @@ REST_FRAMEWORK = {
         'rest_framework.authentication.TokenAuthentication',
     ],
 
-    'DEFAULT_PAGINATION_CLASS': 'utils.pagination.CustomPagination',
+    'DEFAULT_PAGINATION_CLASS': 'utils.pagination.PageLimitPagination',
     'PAGE_SIZE': 10,
 }
 
@@ -115,10 +109,10 @@ DJOSER = {
         'user_list': ['rest_framework.permissions.AllowAny'],
     },
     'SERIALIZERS': {
-        'token_create': 'users.serializers.CustomTokenCreateSerializer',
-        'user_create': 'users.serializers.CustomUserCreateSerializer',
-        'user': 'users.serializers.CustomUserSerializer',
-        'current_user': 'users.serializers.CustomUserSerializer',
+        'token_create': 'users.serializers.TokenCreateSerializer',
+        'user_create': 'users.serializers.UserCreateSerializer',
+        'user': 'users.serializers.UserSerializer',
+        'current_user': 'users.serializers.UserSerializer',
     }
 }
 
@@ -144,3 +138,8 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 CHAR_LENGTH = 200
 COLOR_CHAR_LENGTH = 7
+MIN_COOKING_TIME = 1  # Минимальное время готовки.
+MIN_INGREDIENT = 1  # Минимальное количество ингредиентов в рецепте.
+MIN_AMOUNT = 1  # Минимальное количество одного ингредиента.
+PAGINATION = 6  # Количество объектов на странице пагинации.
+EMAIL_LENGTH = 254

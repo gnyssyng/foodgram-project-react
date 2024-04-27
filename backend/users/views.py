@@ -1,14 +1,11 @@
-from django.db import IntegrityError
 from django.shortcuts import get_object_or_404
 from djoser.views import UserViewSet
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-
-from api.models import Recipe
-from api.serializers import FollowSerializer
-from users.models import CustomUser, Follow
+from users.models import Follow, User
+from users.serializers import FollowReadSerializer, FollowSerializer
 
 
 def response_400_user(message):
@@ -16,54 +13,20 @@ def response_400_user(message):
     return Response(message, status=status.HTTP_400_BAD_REQUEST)
 
 
-class CustomUserView(UserViewSet):
+class UserView(UserViewSet):
     '''
     Viewset для взаимодействия с моделью пользователя.
+
     Также, в нём описаны методы, которые управляют запросами к эндпоинтам
     /subsribe/ и /subsriptions/, связанным с моделью Follow,
     отвечающей за подписки пользователей.
     '''
 
-    ERRORS = {
-        'double_subscription':
-        {'errors': 'Невозможно подписаться дважды'},
-        'self_subscription':
-        {'erorrs': 'Невозможно подписаться на самого себя.'},
-        'user_not_found':
-        {'detail': 'Пользователя нет в подписках.'},
-        'not_authenticated':
-        {'detail': 'Учетные данные не были предоставлены.'}
-    }
+    def get_queryset(self):
+        return User.objects.all()
 
     def get_follow_queryset(self):
-        queryset = Follow.objects.filter(user=self.request.user)
-        if 'limit' in self.request.GET:
-            limit = int(self.request.GET.get('limit'))
-            queryset = queryset[:limit]
-        return queryset
-
-    def get_paginated_serializer_data(self, queryset):
-
-        if 'recipes_limit' in self.request.GET:
-            recipes_limit = int(self.request.GET.get('recipes_limit'))
-        else:
-            recipes_limit = None
-        recipes = Recipe.objects.filter(
-            author_id__in=self.get_follow_queryset().values_list(
-                'following', flat=True
-            )).order_by('id')
-        print(recipes)
-        page = self.paginate_queryset(queryset)
-        serializer = FollowSerializer(
-            page,
-            many=True,
-            context={
-                'request': self.request,
-                'recipes': recipes,
-                'recipes_limit': recipes_limit
-            }
-        )
-        return serializer
+        return Follow.objects.filter(user=self.request.user)
 
     @action(['get'], detail=False)
     def me(self, request, *args, **kwargs):
@@ -74,7 +37,10 @@ class CustomUserView(UserViewSet):
             return Response(serializer.data)
         else:
             return Response(
-                self.ERRORS.get('not_authenticated'),
+                {
+                    'invalid_credentials':
+                    'Страница доступа только авторизованным пользователям.'
+                },
                 status=status.HTTP_401_UNAUTHORIZED
             )
 
@@ -82,41 +48,27 @@ class CustomUserView(UserViewSet):
             permission_classes=[IsAuthenticated, ])
     def subscribe(self, request, id):
         '''Управляет созданием и удалением подписок пользователя.'''
-        following = get_object_or_404(CustomUser, id=int(id))
+        following = get_object_or_404(User, id=int(id))
+        serializer = FollowSerializer(
+            data={'following': following.id, 'user': request.user.id},
+            context={'request': request}
+        )
+        serializer.is_valid(raise_exception=True)
         if request.method == 'POST':
-            if not request.user == following:
-                try:
-                    Follow.objects.create(
-                        user=request.user,
-                        following=following
-                    )
-                except IntegrityError:
-                    return response_400_user(
-                        self.ERRORS.get('double_subscription')
-                    )
-                return Response(
-                    self.get_paginated_serializer_data(
-                        self.get_follow_queryset()
-                    ).data[0],
-                    status=status.HTTP_201_CREATED
-                )
-            else:
-                return response_400_user(self.ERRORS.get('self_subscription'))
-        elif request.method == 'DELETE':
-            try:
-                follow = Follow.objects.get(
-                    user=request.user,
-                    following=following
-                )
-                follow.delete()
-            except Follow.DoesNotExist:
-                return response_400_user(self.ERRORS.get('user_not_found'))
-            return Response(status=status.HTTP_204_NO_CONTENT)
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        Follow.objects.get(
+            following=following,
+            user=request.user
+        ).delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(['get'], detail=False)
     def subscriptions(self, request):
         '''Возвращает список подписок пользователя.'''
-        if request.method == 'GET':
-            queryset = self.get_follow_queryset()
-            data = self.get_paginated_serializer_data(queryset).data
-            return self.get_paginated_response(data)
+        queryset = self.get_follow_queryset()
+        pages = self.paginate_queryset(queryset)
+        serializer = FollowReadSerializer(
+            pages, many=True, context={'request': request}
+        )
+        return self.get_paginated_response(serializer.data)
