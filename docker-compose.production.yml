@@ -18,7 +18,7 @@ services:
       - db
     volumes: 
       - static_volume:/backend_static
-      - media:/media
+      - media:/app/media
   frontend: 
     image: gnyssyng/foodgram_frontend 
     env_file: .env 
