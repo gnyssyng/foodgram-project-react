@@ -18,7 +18,7 @@ services:
       - db
     volumes: 
       - static_volume:/backend_static
-      - media:/media
+      - media:/app/media/images
   frontend: 
     image: gnyssyng/foodgram_frontend 
     env_file: .env 
@@ -32,6 +32,6 @@ services:
       - db
     volumes: 
       - static_volume:/staticfiles/
-      - media:/media
+      - media:/app/media/images
     ports: 
       - 9000:80 
