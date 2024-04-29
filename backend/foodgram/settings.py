@@ -128,7 +128,7 @@ USE_L10N = True
 USE_TZ = True
 
 MEDIA_URL = '/media/'
-MEDIA_ROOT = '/var/www/foodgram/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 STATIC_URL = '/static/'
 
@@ -137,9 +137,13 @@ STATIC_ROOT = BASE_DIR / 'collected_static'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 CHAR_LENGTH = 200
-COLOR_CHAR_LENGTH = 7
+USERS_CHAR_LENGTH = 150
+COLOR_CHAR_LENGTH = 7  # Максимальня длина поля ColorField
 MIN_COOKING_TIME = 1  # Минимальное время готовки.
+MAX_COOKING_TIME = 32767  # Максмиальное время готовки.
 MIN_INGREDIENT = 1  # Минимальное количество ингредиентов в рецепте.
 MIN_AMOUNT = 1  # Минимальное количество одного ингредиента.
 PAGINATION = 6  # Количество объектов на странице пагинации.
-EMAIL_LENGTH = 254
+EMAIL_LENGTH = 254  # Максимальная длина почты
+REGULAR_EXP = r'^[\w.@+-]+$'  # Регулярное выражение для username
+FORBIDDEN_USERNAME = 'me'  # username, который нельзя использовать

@@ -1,16 +1,14 @@
-from api.models import (Cart, Favorite, Ingredient, IngredientInRecipe, Recipe,
-                        Tag)
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from drf_extra_fields.fields import Base64ImageField
 from rest_framework import serializers
-from users.models import User
+
+from api.models import (Cart, Favorite, Ingredient, IngredientInRecipe, Recipe,
+                        Tag)
 from users.serializers import UserSerializer
-
-
-def raise_validation_error(message):
-    '''Вызывает ошибку валидации с переданным в функцию сообщением.'''
-    raise ValidationError(message=message)
+from utils.serializers import (SimpleRecipeSerializer, raise_validation_error,
+                               validate_cart_favorite,
+                               validate_existing_object)
 
 
 class TagSerializer(serializers.ModelSerializer):
@@ -38,28 +36,25 @@ class IngredientInRecipeAddSerializer(serializers.ModelSerializer):
     '''
 
     id = serializers.IntegerField(write_only=True)
-    name = serializers.SerializerMethodField(
-        source='ingredient.name'
-    )
-    measurement_unit = serializers.SerializerMethodField(
-        source='ingredient.measurement_unit'
-    )
     amount = serializers.IntegerField(required=True)
 
     class Meta:
         model = IngredientInRecipe
-        fields = ('id', 'name', 'measurement_unit', 'amount')
+        fields = ('id', 'amount')
 
     def validate_amount(self, value):
-        if value < 1:
-            raise ValidationError('Количество не может быть меньше 1.')
+        if value < settings.MIN_AMOUNT:
+            raise ValidationError(
+                f'Количество не может быть меньше {settings.MIN_AMOUNT}.'
+            )
         return value
 
-    def get_name(self, obj):
-        return obj.ingredient.name
-
-    def get_measurement_unit(self, obj):
-        return obj.ingredient.measurement_unit
+    def validate(self, data):
+        try:
+            Ingredient.objects.get(id=data.get('id'))
+        except Ingredient.DoesNotExist:
+            raise_validation_error('Несуществующий ингредиент')
+        return super().validate(data)
 
 
 class IngredientInRecipeSerializer(serializers.ModelSerializer):
@@ -70,54 +65,28 @@ class IngredientInRecipeSerializer(serializers.ModelSerializer):
     '''
 
     id = serializers.ReadOnlyField()
-    name = serializers.CharField(source='ingredient.name')
-    measurement_unit = serializers.CharField(
+    name = serializers.ReadOnlyField(
+        source='ingredient.name'
+    )
+    measurement_unit = serializers.ReadOnlyField(
         source='ingredient.measurement_unit'
     )
-    amount = serializers.IntegerField()
+    amount = serializers.ReadOnlyField()
 
     class Meta:
         model = IngredientInRecipe
         fields = ('id', 'name', 'measurement_unit', 'amount')
 
 
-class CartFavoriteMixin(metaclass=serializers.SerializerMetaclass):
-    '''
-    Миксин для сериализаторов моделей Cart и Favorite.
-
-    Добавляет методы, возвращающие булевы значения нахождения
-    объектов(рецептов) в таблицах моделей Cart и Favorite.
-    true - если рецепт присутствует в таблице соответствующей модели.
-    is_in_shopping_cart - объект есть в пользовательской корзине
-    is_favorited - объект есть в списке избранных рецептов
-    '''
-
-    def get_is_in_shopping_cart(self, obj):
-
-        request = self.context.get('request')
-        return (
-            request.user.is_authenticated
-            and request.user.carts.filter(recipe=obj).exists()
-        )
-
-    def get_is_favorited(self, obj):
-
-        request = self.context.get('request')
-        return (
-            request.user.is_authenticated
-            and request.user.favorites.filter(recipe=obj).exists()
-        )
-
-
-class RecipeSerializer(serializers.ModelSerializer, CartFavoriteMixin):
+class RecipeSerializer(serializers.ModelSerializer):
     '''
     Сериализатор модели Recipe
 
     Предназначен для чтения объектов модели.
     '''
 
-    is_in_shopping_cart = serializers.SerializerMethodField()
-    is_favorited = serializers.SerializerMethodField()
+    is_in_shopping_cart = serializers.BooleanField(default=False)
+    is_favorited = serializers.BooleanField(default=False)
     tags = TagSerializer(read_only=True, many=True)
     author = UserSerializer(read_only=True)
     ingredients = IngredientInRecipeSerializer(
@@ -128,34 +97,13 @@ class RecipeSerializer(serializers.ModelSerializer, CartFavoriteMixin):
     class Meta:
         model = Recipe
         fields = (
-            'id', 'tags', 'author', 'ingredients', 'is_favorited',
-            'is_in_shopping_cart', 'name', 'image', 'text', 'cooking_time'
+            'id', 'tags', 'author', 'ingredients',
+            'name', 'image', 'text', 'cooking_time',
+            'is_in_shopping_cart', 'is_favorited'
         )
 
 
-def validate_existence(recipes, model):
-    '''Проверяет существуют ли объекты модели.'''
-    model_ids = model.objects.values_list('id', flat=True)
-    if not set(recipes).issubset(model_ids):
-        raise_validation_error(
-            f'Несуществующий объект модели {model.__name__}'
-        )
-
-
-def validate_existing_object(value, model):
-    '''Проверяет существуют ли объекты модели и не дублируются ли они.'''
-    if model == Tag:
-        field_ids = [field.id for field in value]
-    else:
-        field_ids = [field['id'] for field in value]
-    validate_existence(field_ids, model)
-    if len(field_ids) > len(set(field_ids)):
-        raise_validation_error(
-            f'Нельзя повторно добавить объект модели {model.__name__}'
-        )
-
-
-class RecipeAddSerializer(serializers.ModelSerializer, CartFavoriteMixin):
+class RecipeAddSerializer(serializers.ModelSerializer):
     '''
     Сериализатор модели Recipe.
 
@@ -171,15 +119,22 @@ class RecipeAddSerializer(serializers.ModelSerializer, CartFavoriteMixin):
         many=True, required=True
     )
     cooking_time = serializers.IntegerField()
-    is_in_shopping_cart = serializers.SerializerMethodField()
-    is_favorited = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Recipe
+        fields = (
+            'id', 'tags', 'ingredients', 'name', 'image',
+            'text', 'cooking_time',
+        )
 
     def validate(self, data):
-        if not data.get('tags'):
+        ingredients = data.get('ingredients')
+        tags = data.get('tags')
+        if not tags:
             raise_validation_error(
                 'Должен присутствовать как минимум один тэг.'
             )
-        elif not data.get('ingredients'):
+        elif not ingredients:
             raise_validation_error(
                 'Должен присутствовать как минимум один ингредиент.'
             )
@@ -187,32 +142,32 @@ class RecipeAddSerializer(serializers.ModelSerializer, CartFavoriteMixin):
             raise_validation_error(
                 'Нельзя отправить рецепт без фото.'
             )
-        elif data.get('cooking_time') < settings.MIN_COOKING_TIME:
+        elif (
+            data.get('cooking_time') < settings.MIN_COOKING_TIME
+            or data.get('cooking_time') > settings.MAX_COOKING_TIME
+        ):
             raise_validation_error(
-                'Время готовки не может быть'
-                f'меньше {settings.MIN_COOKING_TIME}.'
+                'Время готовки не может быть '
+                f'меньше {settings.MIN_COOKING_TIME} '
+                f'или больше {settings.MAX_COOKING_TIME}'
             )
-        validate_existing_object(data.get('ingredients'), Ingredient)
-        validate_existing_object(data.get('tags'), Tag)
+        validate_existing_object(ingredients, Ingredient)
+        validate_existing_object(tags, Tag)
         return super().validate(data)
 
-    class Meta:
-        model = Recipe
-        fields = (
-            'id', 'tags', 'ingredients', 'is_favorited',
-            'is_in_shopping_cart', 'name', 'image', 'text', 'cooking_time'
-        )
-
     def create_ingredint_in_recipe(self, ingredients_data, recipe):
-
+        ingredients = []
         for ingredient in ingredients_data:
             amount = ingredient.get('amount')
             ingredient = ingredient.get('id')
-            IngredientInRecipe.objects.create(
-                recipe=recipe,
-                ingredient=Ingredient(id=ingredient),
-                amount=amount
+            ingredients.append(
+                IngredientInRecipe(
+                    recipe=recipe,
+                    ingredient_id=ingredient,
+                    amount=amount
+                )
             )
+        IngredientInRecipe.objects.bulk_create(ingredients)
 
     def create(self, validated_data):
         validated_data.update(
@@ -244,65 +199,25 @@ class RecipeAddSerializer(serializers.ModelSerializer, CartFavoriteMixin):
         return serializer
 
 
-def validate_cart_favorite(request, data, model):
-    '''Валидация моделей Cart и Favorite
-
-    Проверяет нахождения объекта(рецепта)
-    модели(Cart или Favorite) в базе.'''
-    if request.method == 'POST':
-        if model.objects.filter(
-                author=data.get('author'),
-                recipe=data.get('recipe').pk
-        ).exists():
-            return raise_validation_error(
-                'Нельзя добавить дважды один и тот же объект'
-            )
-        return data
-    try:
-        model.objects.get(
-            recipe=data.get('recipe'),
-            author=data.get('author')
-        )
-    except model.DoesNotExist:
-        return raise_validation_error(
-            f'Не существует такого объекта модели {model.__name__}'
-        )
-    return data
-
-
 class CartSerializer(serializers.ModelSerializer):
     '''Сериализатор модели Cart.'''
-
-    recipe = serializers.PrimaryKeyRelatedField(queryset=Recipe.objects.all())
-    author = serializers.PrimaryKeyRelatedField(
-        queryset=User.objects.all()
-    )
 
     class Meta:
         model = Cart
         fields = ['recipe', 'author']
 
     def validate(self, data):
-        return super().validate(
-            validate_cart_favorite(self.context.get('request'), data, Cart)
-        )
+        validate_cart_favorite(self.context.get('request'), data, Cart)
+        return super().validate(data)
 
     def to_representation(self, instance):
-        return {
-            'id': instance.recipe.id,
-            'name': instance.recipe.name,
-            'image': instance.recipe.image.url,
-            'cooking_time': instance.recipe.cooking_time
-        }
+        return SimpleRecipeSerializer(
+            instance.recipe
+        ).data
 
 
 class FavoriteSerializer(serializers.ModelSerializer):
     '''Сериализатор модели Favorite.'''
-
-    recipe = serializers.PrimaryKeyRelatedField(queryset=Recipe.objects.all())
-    author = serializers.PrimaryKeyRelatedField(
-        queryset=User.objects.all()
-    )
 
     class Meta:
         model = Favorite
@@ -313,9 +228,6 @@ class FavoriteSerializer(serializers.ModelSerializer):
         return super().validate(data)
 
     def to_representation(self, instance):
-        return {
-            'id': instance.recipe.id,
-            'name': instance.recipe.name,
-            'image': instance.recipe.image.url,
-            'cooking_time': instance.recipe.cooking_time
-        }
+        return SimpleRecipeSerializer(
+            instance.recipe
+        ).data

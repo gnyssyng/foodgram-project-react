@@ -1,17 +1,14 @@
-from api.models import Recipe
+from django.conf import settings
 from django.contrib.auth import authenticate
 from django.core.exceptions import ValidationError
 from django.core.validators import RegexValidator
 from djoser.serializers import UserCreateSerializer, UserSerializer
 from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
+
+from api.models import Recipe
 from users.models import Follow, User
-from utils.serializers import SimpleRecipeSerializer
-
-
-def raise_validation_error(message):
-    '''Вызывает ошибку валидации с переданным в функцию сообщением.'''
-    raise ValidationError(message=message)
+from utils.serializers import SimpleRecipeSerializer, raise_validation_error
 
 
 class UserCreateSerializer(UserCreateSerializer):
@@ -27,17 +24,17 @@ class UserCreateSerializer(UserCreateSerializer):
         ]
     )
     username = serializers.CharField(
-        max_length=150,
+        max_length=settings.USERS_CHAR_LENGTH,
         validators=[
             UniqueValidator(queryset=User.objects.all()),
             RegexValidator(
-                regex=r'^[\w.@+-]+$'
+                regex=settings.REGULAR_EXP
             ),
         ],
     )
 
     def validate(self, data):
-        if data.get('username') == 'me':
+        if data.get('username') == settings.FORBIDDEN_USERNAME:
             raise ValidationError(
                 'Нельзя использоватя me в качестве юзернейма.'
             )
@@ -84,9 +81,9 @@ class TokenCreateSerializer(serializers.Serializer):
         self.fail('invalid_credentials')
 
 
-class UserSerializer(UserSerializer):
+class UserSerializer(serializers.ModelSerializer):
     '''
-    Сериализатор модели CustomUSer.
+    Сериализатор модели User.
 
     Предназначен для десереализации объектов модели.
     '''
@@ -116,11 +113,36 @@ class UserSerializer(UserSerializer):
         ).exists()
 
 
+class FollowReadSerializer(UserSerializer):
+    '''Сериализатор для чтения объектов модели Follow.'''
+
+    recipes = serializers.SerializerMethodField()
+    recipes_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = UserSerializer.Meta.fields + [
+            'recipes', 'recipes_count'
+        ]
+
+    def get_recipes(self, obj):
+        try:
+            recipe_limit = int(
+                self.context.get('request').GET.get('recipes_limit')
+            )
+        except (TypeError, ValueError):
+            recipe_limit = None
+        return SimpleRecipeSerializer(
+            Recipe.objects.filter(author=obj),
+            many=True
+        ).data[:recipe_limit]
+
+    def get_recipes_count(self, obj):
+        return len(Recipe.objects.filter(author=obj))
+
+
 class FollowSerializer(serializers.ModelSerializer):
     '''Сериализатор для создания объектов модели Follow.'''
-
-    following = serializers.PrimaryKeyRelatedField(queryset=User.objects.all())
-    user = serializers.PrimaryKeyRelatedField(queryset=User.objects.all())
 
     class Meta:
         model = Follow
@@ -145,72 +167,7 @@ class FollowSerializer(serializers.ModelSerializer):
         return super().validate(data)
 
     def to_representation(self, instance):
-        try:
-            recipe_limit = int(
-                self.context.get('request').GET.get('recipes_limit')
-            )
-        except Exception:
-            recipe_limit = None
-        data = super().to_representation(instance)
-        following_user = User.objects.get(id=data['following'])
-        following_user_recipes = Recipe.objects.filter(
-            author=following_user
-        )[:recipe_limit]
-        return {
-            'email': following_user.email,
-            'id': following_user.pk,
-            'username': following_user.username,
-            'first_name': following_user.first_name,
-            'last_name': following_user.last_name,
-            'is_subscribed': Follow.objects.filter(
-                user=following_user,
-                following=data['user']
-            ).exists(),
-            'recipes': SimpleRecipeSerializer(
-                following_user_recipes,
-                many=True,
-                context={'request': self.context.get('request')}
-            ).data,
-            'recipes_count': len(following_user_recipes)
-        }
-
-
-class FollowReadSerializer(serializers.ModelSerializer):
-    '''Сериализатор для чтения объектов модели Follow.'''
-
-    following = serializers.PrimaryKeyRelatedField(queryset=User.objects.all())
-    user = serializers.PrimaryKeyRelatedField(queryset=User.objects.all())
-
-    class Meta:
-        model = Follow
-        fields = ['following', 'user']
-
-    def to_representation(self, instance):
-        try:
-            recipe_limit = int(
-                self.context.get('request').GET.get('recipes_limit')
-            )
-        except Exception:
-            recipe_limit = None
-        data = super().to_representation(instance)
-        following_user = User.objects.get(id=data['following'])
-        following_user_recipes = Recipe.objects.filter(
-            author=following_user
-        )[:recipe_limit]
-        return {
-            'email': following_user.email,
-            'id': following_user.pk,
-            'username': following_user.username,
-            'first_name': following_user.first_name,
-            'last_name': following_user.last_name,
-            'is_subscribed': Follow.objects.filter(
-                user=following_user,
-                following=data['user']
-            ).exists(),
-            'recipes': SimpleRecipeSerializer(
-                following_user_recipes,
-                many=True,
-                context={'request': self.context.get('request')}
-            ).data,
-            'recipes_count': len(following_user_recipes)
-        }
+        return FollowReadSerializer(
+            instance.following,
+            context={'request': self.context.get('request')}
+        ).data

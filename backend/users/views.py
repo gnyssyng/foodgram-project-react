@@ -4,6 +4,7 @@ from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+
 from users.models import Follow, User
 from users.serializers import FollowReadSerializer, FollowSerializer
 
@@ -66,7 +67,7 @@ class UserView(UserViewSet):
     @action(['get'], detail=False)
     def subscriptions(self, request):
         '''Возвращает список подписок пользователя.'''
-        queryset = self.get_follow_queryset()
+        queryset = User.objects.filter(following__user=request.user)
         pages = self.paginate_queryset(queryset)
         serializer = FollowReadSerializer(
             pages, many=True, context={'request': request}

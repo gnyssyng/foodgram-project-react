@@ -1,7 +1,10 @@
+from django.apps import apps
+from django.conf import settings
+from django.contrib import admin
+from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
+
 from api.models import (Cart, Favorite, Ingredient, IngredientInRecipe, Recipe,
                         Tag)
-from django.apps import apps
-from django.contrib import admin
 from users.models import Follow, User
 
 admin.site.empty_value_display = 'Не задано'
@@ -41,6 +44,7 @@ class RecipeAdmin(admin.ModelAdmin):
     list_display_links = ('name',)
     search_fields = ('name',)
     list_filter = ('name', 'author', 'tags')
+    min_num = settings.MIN_INGREDIENT
 
     @admin.display(description='Тэги')
     def tags_display(self, obj):
@@ -66,12 +70,12 @@ class CartAdmin(admin.ModelAdmin):
 
 
 @admin.register(User)
-class CustomUserAdmin(admin.ModelAdmin):
+class UserAdmin(BaseUserAdmin):
     list_display = (
         'id', 'email', 'username', 'first_name',
         'last_name',
     )
-    search_fields = ('username', )
+    search_fields = ('username',)
     list_filter = ('username', 'email')
 
 
@@ -79,4 +83,4 @@ class CustomUserAdmin(admin.ModelAdmin):
 class FollowAdmin(admin.ModelAdmin):
     list_display = ('user', 'following')
     list_filter = ('user', 'following')
-    search_fields = ('user', 'following')
+    search_fields = ('user__username', 'following__username')

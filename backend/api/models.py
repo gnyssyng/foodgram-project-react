@@ -2,6 +2,7 @@ from colorfield.fields import ColorField
 from django.conf import settings
 from django.core.validators import MinValueValidator
 from django.db import models
+
 from users.models import User
 
 
@@ -18,15 +19,11 @@ class Tag(models.Model):
     )
     color = ColorField(
         'Цвет',
+        unique=True,
+        max_length=settings.COLOR_CHAR_LENGTH
     )
 
     class Meta:
-        constraints = (
-            models.UniqueConstraint(
-                fields=['name', 'slug', 'color'],
-                name='unique_tag'
-            ),
-        )
         ordering = ('name',)
         verbose_name = 'Тэг'
         verbose_name_plural = 'Тэги'
@@ -100,7 +97,7 @@ class Recipe(models.Model):
         validators=(
             MinValueValidator(
                 settings.MIN_COOKING_TIME,
-                f'Неккореткное время приготовления. Минимальное время:'
+                'Неккореткное время приготовления. Минимальное время:'
                 f'{settings.MIN_COOKING_TIME}.'
             ),
         )
@@ -142,6 +139,8 @@ class IngredientInRecipe(models.Model):
     )
 
     class Meta:
+        verbose_name = 'Ингредиент в рецепте'
+        verbose_name_plural = 'Ингредиенты в рецептах'
         ordering = ('ingredient',)
 
     def __str__(self):

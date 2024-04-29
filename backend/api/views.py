@@ -1,18 +1,20 @@
-from api.filters import RecipeFilter
+from django.db.models import Exists, OuterRef, Sum
+from django.http import HttpResponse
+from django.shortcuts import get_object_or_404
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import status
+from rest_framework.decorators import action
+from rest_framework.permissions import (SAFE_METHODS, AllowAny,
+                                        IsAuthenticatedOrReadOnly)
+from rest_framework.response import Response
+from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
+
+from api.filters import IngredientFilter, RecipeFilter
 from api.models import Cart, Favorite, Ingredient, Recipe, Tag
 from api.permissions import IsAuthor
 from api.serializers import (CartSerializer, FavoriteSerializer,
                              IngredientSerializer, RecipeAddSerializer,
                              RecipeSerializer, TagSerializer)
-from django.db.models import Exists, OuterRef, Sum
-from django.http import HttpResponse
-from django.shortcuts import get_object_or_404
-from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import filters, status
-from rest_framework.decorators import action
-from rest_framework.permissions import AllowAny, IsAuthenticatedOrReadOnly
-from rest_framework.response import Response
-from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
 from utils.views import response_400_recipe
 
 
@@ -28,26 +30,14 @@ class IngredientViewSet(ReadOnlyModelViewSet):
 
     pagination_class = None
     permission_classes = [AllowAny, ]
-    filter_backends = [filters.SearchFilter]
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = IngredientFilter
     search_fields = ['name']
     queryset = Ingredient.objects.all()
     serializer_class = IngredientSerializer
 
-    def get_queryset(self):
-        queryset = self.queryset
-        name_starts_with = self.request.query_params.get('name', None)
-        if name_starts_with:
-            queryset = queryset.filter(name__istartswith=name_starts_with)
-        return queryset
-
 
 class RecipeViewSet(ModelViewSet):
-
-    ERRORS = {
-        'not_exists': 'Рецепта с таким id не существует.',
-        'already_exists': 'Нельзя дважды добавить одно и то же.',
-        'not_in_cart_favorite': 'Рецепт с таким id не был добавлен.'
-    }
 
     filter_backends = [DjangoFilterBackend]
     filterset_class = RecipeFilter
@@ -79,12 +69,27 @@ class RecipeViewSet(ModelViewSet):
         )
 
     def get_serializer_class(self):
-        if self.request.method == 'GET':
+        if self.request.method in SAFE_METHODS:
             return RecipeSerializer
         return RecipeAddSerializer
 
-    def get_shopping_cart_queryset(self, request):
-        '''Возвращает queryset для скачивания списка покупок.'''
+    def get_shopping_cart_queryset(self, shopping_list):
+        '''Возвращает ответ со списокм покупок.'''
+        response = HttpResponse(content_type='text/plain')
+        response['Content-Disposition'] = (
+            'attachment; filename="shopping_list.txt"'
+        )
+        for ingredient in shopping_list:
+            response.write(
+                f'{ingredient["ingredients__name"]}: '
+                f'{ingredient["amount"]}'
+                f'{ingredient["ingredients__measurement_unit"]}\n'
+            )
+        return response
+
+    @action(['GET'], detail=False, name='download-shopping-cart')
+    def download_shopping_cart(self, request):
+        '''Подготавлиет к скачиванию файл списк покупок.'''
         cart_recipes = Cart.objects.filter(
             author=request.user
         ).values_list('recipe', flat=True)
@@ -98,25 +103,9 @@ class RecipeViewSet(ModelViewSet):
         ).annotate(
             amount=Sum('ingredient_recipes__amount')
         ).order_by('ingredients__name')
-        return ingredients_amount
+        return self.get_shopping_cart_queryset(ingredients_amount)
 
-    @action(['GET'], detail=False, name='download-shopping-cart')
-    def download_shopping_cart(self, request):
-        '''Подготавлиет к скачиванию файл со списком покупок.'''
-        queryset = self.get_shopping_cart_queryset(request)
-        response = HttpResponse(content_type='text/plain')
-        response['Content-Disposition'] = (
-            'attachment; filename="shopping_list.txt"'
-        )
-        for ingredient in queryset:
-            response.write(
-                f'{ingredient["ingredients__name"]}: '
-                f'{ingredient["amount"]}'
-                f'{ingredient["ingredients__measurement_unit"]}\n'
-            )
-        return response
-
-    def post_delete_favorite_cart(self, request, pk, model):
+    def post_delete_favorite_cart(self, request, pk, model, serializer):
         if request.method == 'POST':
             try:
                 recipe = Recipe.objects.get(id=pk)
@@ -125,16 +114,10 @@ class RecipeViewSet(ModelViewSet):
         else:
             recipe = get_object_or_404(Recipe, id=pk)
         data = {'recipe': recipe.id, 'author': request.user.id}
-        if model == Cart:
-            serializer = CartSerializer(
-                data=data,
-                context={'request': request}
-            )
-        elif model == Favorite:
-            serializer = FavoriteSerializer(
-                data=data,
-                context={'request': request}
-            )
+        serializer = serializer(
+            data=data,
+            context={'request': request}
+        )
         serializer.is_valid(raise_exception=True)
         if request.method == 'POST':
             serializer.save()
@@ -148,8 +131,12 @@ class RecipeViewSet(ModelViewSet):
 
     @action(['POST', 'DELETE'], detail=True, name='shopping-cart')
     def shopping_cart(self, request, pk):
-        return self.post_delete_favorite_cart(request, pk, Cart)
+        return self.post_delete_favorite_cart(
+            request, pk, Cart, CartSerializer
+        )
 
     @action(['POST', 'DELETE'], detail=True, name='favorite')
     def favorite(self, request, pk):
-        return self.post_delete_favorite_cart(request, pk, Favorite)
+        return self.post_delete_favorite_cart(
+            request, pk, Favorite, FavoriteSerializer
+        )

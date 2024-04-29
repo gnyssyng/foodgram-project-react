@@ -1,11 +1,15 @@
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+
 from users.validators import validate_me, validate_pattern
 
 
 class User(AbstractUser):
     '''Модель пользователя.'''
+
+    USERNAME_FIELD = 'email'
+    REQUIRED_FIELDS = ('first_name', 'last_name', 'username')
 
     email = models.EmailField(
         'Электронная почта',
@@ -15,24 +19,21 @@ class User(AbstractUser):
     username = models.CharField(
         'Уникальный юзернейм',
         unique=True,
-        max_length=150,
+        max_length=settings.USERS_CHAR_LENGTH,
         validators=[validate_pattern, validate_me]
     )
     first_name = models.CharField(
         'Имя пользователя',
-        max_length=150
+        max_length=settings.USERS_CHAR_LENGTH
     )
     last_name = models.CharField(
         'Фамилия пользователя',
-        max_length=150
+        max_length=settings.USERS_CHAR_LENGTH
     )
     password = models.CharField(
         'Пароль',
-        max_length=150
+        max_length=settings.USERS_CHAR_LENGTH
     )
-
-    USERNAME_FIELD = 'email'
-    REQUIRED_FIELDS = ('first_name', 'last_name', 'username')
 
     class Meta:
         ordering = ('username',)
@@ -75,3 +76,6 @@ class Follow(models.Model):
         ordering = ('user',)
         verbose_name = 'Подписка'
         verbose_name_plural = 'Подпсики'
+
+    def __str__(self):
+        return self.user
