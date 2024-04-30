@@ -32,6 +32,7 @@ class TagInLine(admin.TabularInline):
 
 class IngredientInLine(admin.TabularInline):
     model = IngredientInRecipe
+    min_num = settings.MIN_INGREDIENT
 
 
 @admin.register(Recipe)
@@ -44,8 +45,7 @@ class RecipeAdmin(admin.ModelAdmin):
     list_display_links = ('name',)
     search_fields = ('name',)
     list_filter = ('name', 'author', 'tags')
-    min_num = settings.MIN_INGREDIENT
-
+    
     @admin.display(description='Тэги')
     def tags_display(self, obj):
         return ', '.join([tag.slug for tag in obj.tags.all()])
