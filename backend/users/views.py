@@ -9,11 +9,6 @@ from users.models import Follow, User
 from users.serializers import FollowReadSerializer, FollowSerializer
 
 
-def response_400_user(message):
-    '''Функция возвращающая код 400 и сообщение, передаваемое в функцию.'''
-    return Response(message, status=status.HTTP_400_BAD_REQUEST)
-
-
 class UserView(UserViewSet):
     '''
     Viewset для взаимодействия с моделью пользователя.
@@ -27,7 +22,9 @@ class UserView(UserViewSet):
         return User.objects.all()
 
     def get_follow_queryset(self):
-        return Follow.objects.filter(user=self.request.user)
+        return Follow.objects.select_related('author').filter(
+            user=self.request.user
+        )
 
     @action(['get'], detail=False)
     def me(self, request, *args, **kwargs):

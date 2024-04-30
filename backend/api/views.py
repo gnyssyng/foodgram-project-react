@@ -15,13 +15,13 @@ from api.permissions import IsAuthor
 from api.serializers import (CartSerializer, FavoriteSerializer,
                              IngredientSerializer, RecipeAddSerializer,
                              RecipeSerializer, TagSerializer)
-from utils.views import response_400_recipe
+from utils.views import response_400, response_404_recipe
 
 
 class TagViewSet(ReadOnlyModelViewSet):
 
     pagination_class = None
-    permission_classes = (AllowAny,)
+    permission_classes = [AllowAny]
     queryset = Tag.objects.all()
     serializer_class = TagSerializer
 
@@ -29,7 +29,7 @@ class TagViewSet(ReadOnlyModelViewSet):
 class IngredientViewSet(ReadOnlyModelViewSet):
 
     pagination_class = None
-    permission_classes = [AllowAny, ]
+    permission_classes = [AllowAny]
     filter_backends = [DjangoFilterBackend]
     filterset_class = IngredientFilter
     search_fields = ['name']
@@ -106,25 +106,28 @@ class RecipeViewSet(ModelViewSet):
         return self.get_shopping_cart_queryset(ingredients_amount)
 
     def post_delete_favorite_cart(self, request, pk, model, serializer):
-        if request.method == 'POST':
-            try:
-                recipe = Recipe.objects.get(id=pk)
-            except Recipe.DoesNotExist:
-                return response_400_recipe('Несуществующий рецепт.')
-        else:
-            recipe = get_object_or_404(Recipe, id=pk)
+        '''Подготавливает данные для сериализаторов модели Cart и Favortie.'''
+        METHODS_RESPONSE = {
+            'POST': response_400('Несуществующий рецепт.'),
+            'DELETE': response_404_recipe('Несуществующий рецепт.')
+        }
+        try:
+            recipe = Recipe.objects.get(id=pk)
+        except Recipe.DoesNotExist:
+            return METHODS_RESPONSE.get(request.method)
         data = {'recipe': recipe.id, 'author': request.user.id}
         serializer = serializer(
             data=data,
             context={'request': request}
         )
-        serializer.is_valid(raise_exception=True)
         if request.method == 'POST':
+            serializer.is_valid(raise_exception=True)
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
+        serializer.is_valid(raise_exception=True)
         get_object_or_404(
             model,
-            recipe=serializer.validated_data.get('recipe'),
+            recipe=recipe.id,
             author=request.user
         ).delete()
         return Response(status=status.HTTP_204_NO_CONTENT)

@@ -42,6 +42,10 @@ class IngredientInRecipeAddSerializer(serializers.ModelSerializer):
         model = IngredientInRecipe
         fields = ('id', 'amount')
 
+    def validate(self, data):
+        self.validate_ingredients(data)
+        return super().validate(data)
+
     def validate_amount(self, value):
         if value < settings.MIN_AMOUNT:
             raise ValidationError(
@@ -49,12 +53,9 @@ class IngredientInRecipeAddSerializer(serializers.ModelSerializer):
             )
         return value
 
-    def validate(self, data):
-        try:
-            Ingredient.objects.get(id=data.get('id'))
-        except Ingredient.DoesNotExist:
+    def validate_ingredients(self, data):
+        if not Ingredient.objects.filter(id=data.get('id')).exists():
             raise_validation_error('Несуществующий ингредиент')
-        return super().validate(data)
 
 
 class IngredientInRecipeSerializer(serializers.ModelSerializer):
@@ -142,9 +143,9 @@ class RecipeAddSerializer(serializers.ModelSerializer):
             raise_validation_error(
                 'Нельзя отправить рецепт без фото.'
             )
-        elif (
-            data.get('cooking_time') < settings.MIN_COOKING_TIME
-            or data.get('cooking_time') > settings.MAX_COOKING_TIME
+        elif not (
+            settings.MIN_COOKING_TIME <= data.get('cooking_time')
+            <= settings.MAX_COOKING_TIME
         ):
             raise_validation_error(
                 'Время готовки не может быть '
@@ -156,17 +157,11 @@ class RecipeAddSerializer(serializers.ModelSerializer):
         return super().validate(data)
 
     def create_ingredint_in_recipe(self, ingredients_data, recipe):
-        ingredients = []
-        for ingredient in ingredients_data:
-            amount = ingredient.get('amount')
-            ingredient = ingredient.get('id')
-            ingredients.append(
-                IngredientInRecipe(
-                    recipe=recipe,
-                    ingredient_id=ingredient,
-                    amount=amount
-                )
-            )
+        ingredients = [
+            IngredientInRecipe(
+                recipe=recipe, ingredient_id=ingredient.get('id'),
+                amount=ingredient.get('amount')
+            ) for ingredient in ingredients_data]
         IngredientInRecipe.objects.bulk_create(ingredients)
 
     def create(self, validated_data):

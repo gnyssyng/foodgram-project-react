@@ -133,12 +133,22 @@ class FollowReadSerializer(UserSerializer):
         except (TypeError, ValueError):
             recipe_limit = None
         return SimpleRecipeSerializer(
-            Recipe.objects.filter(author=obj),
+            Recipe.objects.select_related(
+                'author'
+            ).prefetch_related('ingredients').filter(
+                author=obj
+            ),
             many=True
         ).data[:recipe_limit]
 
     def get_recipes_count(self, obj):
-        return len(Recipe.objects.filter(author=obj))
+        return (
+            Recipe.objects.select_related(
+                'author'
+            ).prefetch_related('ingredients').filter(
+                author=obj
+            ).count()
+        )
 
 
 class FollowSerializer(serializers.ModelSerializer):
