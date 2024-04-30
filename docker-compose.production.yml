@@ -22,8 +22,6 @@ services:
       - media:/app/media/
   frontend: 
     image: gnyssyng/foodgram_frontend 
-    env_file: .env 
-    command: cp -r /app/build/. /frontend_static/
     volumes: 
       - static_frontend:/static_frontend 
   infra: 
