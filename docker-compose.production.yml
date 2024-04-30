@@ -18,12 +18,12 @@ services:
     depends_on:
       - db
     volumes: 
-      - static:/backend_static
+      - static:/app/backend_static
       - media:/app/media/
   frontend: 
     image: gnyssyng/foodgram_frontend 
     env_file: .env 
-    command: cp -r /app/build/. /frontend_static/ 
+    command: cp -r /app/build/. /frontend_static/
     volumes: 
       - frontend_static:/frontend_static 
   infra: 
