@@ -12,8 +12,7 @@ services:
     volumes: 
       - pg_data_production:/var/lib/postgresql/data 
   backend: 
-    #image: gnyssyng/foodgram_backend 
-    build: ./backend
+    image: gnyssyng/foodgram_backend 
     env_file: 
       -  .env
     depends_on:
@@ -28,8 +27,7 @@ services:
     volumes: 
       - static_volume:/frontend_static 
   infra: 
-    #image: gnyssyng/foodgram_gateway
-    build: ./infra
+    image: gnyssyng/foodgram_gateway
     env_file: .env 
     depends_on:
       - db
